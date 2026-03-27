@@ -20,23 +20,17 @@ const steps = [
 
 const plans = [
   {
-    name: "Free",
+    name: "Free Trial",
     price: "$0",
-    description: "For testing the workflow before you commit.",
-    features: ["2 videos / month", "Watermarked exports", "1 voice option"]
-  },
-  {
-    name: "Starter",
-    price: "$19",
-    description: "For solo founders shipping product promos weekly.",
-    features: ["15 videos / month", "No watermark", "5 voice options"],
-    featured: true
+    description: "Try the full experience. No credit card needed.",
+    features: ["2 free videos", "3-day trial window", "All voices & features", "No watermark"]
   },
   {
     name: "Pro",
-    price: "$49",
-    description: "For agencies and operators running continuous campaigns.",
-    features: ["Unlimited videos", "Priority rendering", "Custom brand colors"]
+    price: "$19",
+    description: "Everything you need to ship product videos weekly.",
+    features: ["30 videos / month", "All voices & caption styles", "Priority rendering", "No watermark"],
+    featured: true
   }
 ];
 
@@ -66,7 +60,7 @@ export default function HomePage() {
                   href="/signup"
                   className="rounded-full bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-blue-400"
                 >
-                  Start Free
+                  Try Free - No Card Needed
                 </Link>
                 <Link
                   href="#how-it-works"
