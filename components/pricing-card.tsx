@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 type PricingCardProps = {
   name: string;
   price: string;
+  priceLabel?: string;
   description: string;
   features: string[];
   featured?: boolean;
@@ -11,6 +12,7 @@ type PricingCardProps = {
 export function PricingCard({
   name,
   price,
+  priceLabel,
   description,
   features,
   featured = false
@@ -28,7 +30,7 @@ export function PricingCard({
         <p className="text-sm font-medium text-blue-400">{name}</p>
         <div className="flex items-end gap-2">
           <span className="text-4xl font-semibold text-white">{price}</span>
-          <span className="pb-1 text-sm text-zinc-400">/ month</span>
+          <span className="pb-1 text-sm text-zinc-400">{priceLabel || "/ month"}</span>
         </div>
         <p className="text-sm text-zinc-400">{description}</p>
       </div>

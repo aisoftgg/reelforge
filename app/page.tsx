@@ -20,17 +20,24 @@ const steps = [
 
 const plans = [
   {
-    name: "Free Trial",
-    price: "$0",
-    description: "Try the full experience. No credit card needed.",
-    features: ["2 free videos", "3-day trial window", "All voices & features", "No watermark"]
+    name: "Try It Free",
+    price: "Free",
+    priceLabel: "for 3 days",
+    description: "2 videos, full features, no credit card required.",
+    features: ["2 videos included", "All voices & caption styles", "Full quality export", "No watermark"]
+  },
+  {
+    name: "Starter",
+    price: "$29",
+    description: "For solo founders shipping product videos weekly.",
+    features: ["10 videos / month", "All voices & caption styles", "Priority rendering", "No watermark"],
+    featured: true
   },
   {
     name: "Pro",
-    price: "$19",
-    description: "Everything you need to ship product videos weekly.",
-    features: ["30 videos / month", "All voices & caption styles", "Priority rendering", "No watermark"],
-    featured: true
+    price: "$49",
+    description: "For teams and agencies running continuous campaigns.",
+    features: ["30 videos / month", "Everything in Starter", "Bulk generation", "Custom brand colors"]
   }
 ];
 
