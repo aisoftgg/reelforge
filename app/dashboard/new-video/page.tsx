@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   TARGET_AUDIENCES,
@@ -48,6 +48,18 @@ type ApiResponse = {
   scriptId: string;
   productInfo: ProductInfo | null;
   script: GeneratedScript;
+};
+
+type GenerateVideoResponse = {
+  videoId?: string;
+  status?: "processing" | "completed" | "failed";
+  error?: string;
+};
+
+type VideoStatusResponse = {
+  status?: "pending" | "processing" | "completed" | "failed";
+  videoUrl?: string | null;
+  error?: string;
 };
 
 function StepBadge({
@@ -99,12 +111,17 @@ export default function NewVideoPage() {
   const [hooks, setHooks] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [phaseThreeNotice, setPhaseThreeNotice] = useState("");
+  const [isRendering, setIsRendering] = useState(false);
+  const [renderStage, setRenderStage] = useState<string | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
 
   async function generateScript() {
     setIsGenerating(true);
     setError(null);
-    setPhaseThreeNotice("");
+    setRenderStage(null);
+    setActiveVideoId(null);
+    setGeneratedVideoUrl(null);
 
     try {
       const response = await fetch("/api/generate-script", {
@@ -142,13 +159,98 @@ export default function NewVideoPage() {
     }
   }
 
+  useEffect(() => {
+    if (!activeVideoId || !isRendering) {
+      return;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const response = await fetch(`/api/video-status/${activeVideoId}`, {
+          cache: "no-store"
+        });
+        const payload = (await response.json()) as VideoStatusResponse;
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Failed to fetch video status.");
+        }
+
+        if (payload.status === "completed") {
+          setGeneratedVideoUrl(payload.videoUrl ?? null);
+          setRenderStage("Done!");
+          setIsRendering(false);
+          window.clearInterval(intervalId);
+        }
+
+        if (payload.status === "failed") {
+          setError("Video generation failed. Please try again.");
+          setRenderStage(null);
+          setIsRendering(false);
+          window.clearInterval(intervalId);
+        }
+      } catch (requestError) {
+        setError(requestError instanceof Error ? requestError.message : "Status polling failed.");
+        setRenderStage(null);
+        setIsRendering(false);
+        window.clearInterval(intervalId);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeVideoId, isRendering]);
+
+  async function generateVideo() {
+    if (!projectId || !scriptId || !hooks.length) {
+      setError("Generate a script first.");
+      return;
+    }
+
+    setError(null);
+    setGeneratedVideoUrl(null);
+    setRenderStage("Searching for footage...");
+    setIsRendering(true);
+
+    try {
+      const response = await fetch("/api/generate-video", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          projectId,
+          scriptId,
+          selectedHook,
+          voice: selectedVoice,
+          hookText: hooks[selectedHook],
+          problem,
+          solution,
+          proof,
+          cta
+        })
+      });
+
+      const payload = (await response.json()) as GenerateVideoResponse;
+
+      if (!response.ok || !payload.videoId) {
+        throw new Error(payload.error ?? "Failed to start video generation.");
+      }
+
+      setActiveVideoId(payload.videoId);
+      setRenderStage("Assembling video...");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Video generation failed.");
+      setRenderStage(null);
+      setIsRendering(false);
+    }
+  }
+
   return (
     <main className="p-6 md:p-10">
       <div className="mx-auto max-w-6xl space-y-8">
         <section className="rounded-[2rem] border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl shadow-black/20">
           <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl space-y-4">
-              <p className="text-sm uppercase tracking-[0.24em] text-blue-400">Phase 2</p>
+              <p className="text-sm uppercase tracking-[0.24em] text-blue-400">Phase 3</p>
               <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
                 Script Engine
               </h1>
@@ -376,8 +478,8 @@ export default function NewVideoPage() {
                   <p className="text-sm uppercase tracking-[0.2em] text-blue-400">Step 3</p>
                   <h2 className="mt-2 text-2xl font-semibold text-white">Voice Selection</h2>
                 </div>
-                <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs text-blue-100">
-                  Placeholder for Phase 3
+                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
+                  Stored for render settings
                 </span>
               </div>
 
@@ -411,25 +513,50 @@ export default function NewVideoPage() {
                   <p className="text-sm uppercase tracking-[0.2em] text-blue-400">Step 4</p>
                   <h2 className="mt-2 text-2xl font-semibold text-white">Generate Video</h2>
                 </div>
-                <span className="rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400">
-                  Rendering pipeline pending
+                <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs text-blue-100">
+                  Stock footage + captions
                 </span>
               </div>
 
               <div className="mt-6 rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6">
                 <p className="text-sm leading-7 text-zinc-400">
-                  Script and voice selection are ready. Video rendering, stock footage matching,
-                  voiceover generation, and captions will land in Phase 3.
+                  ReelForge will match each script section to vertical stock footage, then assemble
+                  a captioned MP4 export for the library.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setPhaseThreeNotice("Coming in Phase 3")}
-                  className="mt-6 rounded-2xl bg-blue-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-400"
-                >
-                  Generate Video
-                </button>
-                {phaseThreeNotice ? (
-                  <p className="mt-4 text-sm text-blue-200">{phaseThreeNotice}</p>
+
+                <div className="mt-6 flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={generateVideo}
+                    disabled={isRendering || !projectId || !scriptId}
+                    className="rounded-2xl bg-blue-500 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:bg-blue-500/40"
+                  >
+                    {isRendering ? "Generating..." : "Generate Video"}
+                  </button>
+                  {renderStage ? <p className="text-sm text-blue-200">{renderStage}</p> : null}
+                </div>
+
+                {generatedVideoUrl ? (
+                  <div className="mt-6 space-y-4">
+                    <div className="overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-black">
+                      <video
+                        src={generatedVideoUrl}
+                        controls
+                        className="aspect-[9/16] w-full max-w-sm"
+                      />
+                    </div>
+                    <a
+                      href={generatedVideoUrl}
+                      download
+                      className="inline-flex rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-medium text-zinc-100 transition hover:border-zinc-600 hover:text-white"
+                    >
+                      Download MP4
+                    </a>
+                  </div>
+                ) : null}
+
+                {!generatedVideoUrl && activeVideoId ? (
+                  <p className="mt-4 break-all text-xs text-zinc-500">Video ID: {activeVideoId}</p>
                 ) : null}
               </div>
             </section>
